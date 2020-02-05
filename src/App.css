@@ -1,0 +1,47 @@
+.square {
+  border: 1px solid black;
+  width: 4vw;
+  height: 4vw;
+  text-align: center;
+  display: inline-block;
+  line-height: 4vw;
+  background-color: white;
+}
+.red {
+  font-size: 20px;
+  color: red;
+}
+.focus {
+  background-color: lightblue;
+}
+.board-row {
+  width: 36vw;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.board {
+  display: flex;
+  justify-content: center;
+  flex-flow: row wrap;
+  width: 50vw;
+  margin: 5vw 0 0 24vw;
+  padding: 0;
+}
+.game {
+  display: flex;
+  align-items: center;
+}
+.sideBar {
+  display: flex;
+  flex-flow: column wrap;
+  justify-content: space-evenly;
+  width: 20vw;
+  height: 200px;
+  padding: auto;
+}
+.sideBar button {
+  font-size: 20px;
+  width: 80%;
+  height: 30px;
+}
