@@ -1,21 +1,27 @@
+* {
+  box-sizing: border-box;
+}
 .square {
   border: 1px solid black;
   width: 4vw;
   height: 4vw;
   text-align: center;
-  display: inline-block;
   line-height: 4vw;
   background-color: white;
 }
 .red {
-  font-size: 20px;
+  font-size: 1.2rem;
   color: red;
 }
 .focus {
   background-color: lightblue;
 }
+.invalid {
+  background-color: rgb(190, 126, 126);
+  opacity: 0.7;
+}
 .board-row {
-  width: 36vw;
+  width: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -24,24 +30,26 @@
   display: flex;
   justify-content: center;
   flex-flow: row wrap;
-  width: 50vw;
-  margin: 5vw 0 0 24vw;
+  width: 100%;
   padding: 0;
 }
 .game {
+  margin: 30px 0;
   display: flex;
+  flex-flow: row wrap;
   align-items: center;
 }
 .sideBar {
   display: flex;
   flex-flow: column wrap;
   justify-content: space-evenly;
-  width: 20vw;
+  align-items: center;
+  width: 80%;
+  margin: 0 10%;
   height: 200px;
   padding: auto;
 }
 .sideBar button {
-  font-size: 20px;
-  width: 80%;
-  height: 30px;
+  font-size: 1.2rem;
+  width: 60%;
 }

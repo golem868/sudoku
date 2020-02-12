@@ -4,6 +4,7 @@ function Square(props) {
   let tempClassName = "square";
   if (props.isAnswer) tempClassName += " red";
   if (props.isSelected) tempClassName += " focus";
+  if (!props.isValid) tempClassName += " invalid";
   return (
     <button className={tempClassName} onClick={props.onClick}>
       {props.value}
@@ -14,28 +15,99 @@ class Board extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      selectedSquare: [-1, -1]
+      selectedSquare: [-1, -1],
+      previousNumber: [-1, -1, -1] // row,col,number
     };
   }
   onClick(y, k) {
     this.setState({ selectedSquare: [y, k] });
   }
+
+  //return 0 if valid
+  //       1 if row invalid
+  //       2 if col invalid
+  //       3 if grid invalid
+  userInputIsValid(row, col, number) {
+    const questionGrid = this.props.info.questionGrid;
+    //check for row
+    const orginalRow = questionGrid[row];
+    if (orginalRow.filter(x => x === number).length > 1) return 1;
+    //check for col
+    const orginalCol = questionGrid.map(x => x[col]);
+    if (orginalCol.filter(x => x === number).length > 1) return 2;
+    //check for grid
+    //extension function to return rows / cols (index-wise)to check
+    const filterNonSubGrid = number => {
+      const dimLength = Math.sqrt(this.props.info.questionGrid.length);
+      const startIndex = Math.floor(number / dimLength) * dimLength;
+      return new Array(dimLength).fill(0).map((x, i) => startIndex + i);
+    };
+    const rowsToTake = filterNonSubGrid(row);
+    const colsToTake = filterNonSubGrid(col);
+    const orginalGrid = questionGrid
+      //rows to cover
+      .filter((_, i) => rowsToTake.includes(i))
+      // cols to cover
+      .filter(x => x.filter((_, i) => colsToTake.includes(i)))
+      .flatMap(x => x);
+    if (orginalGrid.filter(x => x === number).length > 1) return 3;
+    return 0;
+  }
   handleKeyUp(e) {
     const [selectedRow, selectedCol] = this.state.selectedSquare;
+    const length = this.props.info.questionGrid.length;
     if (selectedRow === -1 || selectedCol === -1) return;
     // handle Backspace
     if (e.keyCode === 8) {
-      this.props.onKeyPress(-1, selectedRow, selectedCol);
+      this.props.onKeyPress(selectedRow, selectedCol, -1);
     }
-    const numList = [1, 2, 3, 4, 5, 6, 7, 8, 9].map(x => x.toString());
+    const numList = new Array(length).fill(0).map((x, i) => (i + 1).toString());
     if (!numList.includes(e.key)) return;
     const num = parseInt(e.key);
-
-    this.props.onKeyPress(num, selectedRow, selectedCol);
+    this.setState({ previousNumber: [selectedRow, selectedCol, num] });
+    this.props.onKeyPress(selectedRow, selectedCol, num);
   }
   renderGrid() {
     const questionGrid = this.props.info.questionGrid;
     const answerGrid = this.props.info.answerGrid;
+    const [previousRow, previousCol, previousNum] = this.state.previousNumber;
+    let validNumber = 0;
+    //console.log("Previous: ", (previousRow === previousCol) === previousNum);
+    if (previousRow === previousCol && previousRow === -1) {
+      //pass
+    } else {
+      validNumber = this.userInputIsValid(
+        previousRow,
+        previousCol,
+        previousNum
+      );
+    }
+    console.log(validNumber);
+    const isValid = (row, col) => {
+      switch (validNumber) {
+        case 0:
+          return true;
+        case 1: //row Invalid
+          return !(row === previousRow);
+        case 2: //col Invalid
+          return !(col === previousCol);
+        case 3: //grid Invalid
+          const dimLength = Math.sqrt(this.props.info.questionGrid.length);
+          const startingRowIndex =
+            Math.floor(previousRow / dimLength) * dimLength;
+          const startingColIndex =
+            Math.floor(previousCol / dimLength) * dimLength;
+          console.log(startingRowIndex, startingColIndex, dimLength);
+          return !(
+            row >= startingRowIndex &&
+            row < startingRowIndex + dimLength &&
+            col >= startingColIndex &&
+            col < startingColIndex + dimLength
+          );
+        default:
+          return true;
+      }
+    };
     const isSelected = (row, col) => {
       const [selectedRow, selectedCol] = this.state.selectedSquare;
       return row === selectedRow && col === selectedCol;
@@ -45,6 +117,7 @@ class Board extends React.Component {
         <Square
           key={"Row" + y + " Col" + k}
           onClick={() => this.onClick(y, k)}
+          isValid={isValid(y, k)}
           isAnswer={questionGrid[y][k] === 0 ? true : false}
           isSelected={isSelected(y, k)}
           value={j === 0 ? null : j}
@@ -67,6 +140,15 @@ class Board extends React.Component {
     );
   }
 }
+
+/*  7/2/2020: 
+possible integration idea 
+  1.Show user how many solutions available because ideally u want only one
+  (dancing-links findAll function take too much resource with sparse matrix 12/2/2020 give up)
+  2.Make it compatible with mobile version 
+    a) users cant use keyboard to enter number with mobile
+    b) change .css to match size (12/2/2020 done)
+*/
 class Game extends React.Component {
   constructor(props) {
     super(props);
@@ -142,16 +224,17 @@ class Game extends React.Component {
     const exactCoverProb = this.reduceToExactCover();
     //produce one sudoku Result visually
     const dlx = require("dancing-links");
-    const answer = dlx.findOne(exactCoverProb).flatMap(x => x);
+    const answer = dlx.findOne(exactCoverProb); //.flatMap(x => x);
     if (answer.length === 0) {
       this.setState({
         Valid: false
       });
       return;
     }
+
     let puz = this.state.puzzle;
 
-    answer.forEach(element => {
+    answer[0].forEach(element => {
       const [i, j, k] = element.data.split(",").map(x => parseInt(x));
       puz.answerGrid[i][j] = k + 1;
     });
@@ -160,8 +243,10 @@ class Game extends React.Component {
       Valid: true
     });
   }
-  handleValueChange(number, row, col) {
+
+  handleValueChange(row, col, number) {
     const puz = this.state.puzzle;
+    //-1 indicate user input backspace
     puz.questionGrid[row][col] = number === -1 ? 0 : number;
     puz.answerGrid[row][col] = number === -1 ? 0 : number;
     this.setState({
