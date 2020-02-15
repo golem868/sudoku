@@ -1,12 +1,22 @@
 import React from "react";
 import "./App.css";
 function Square(props) {
+  let textInput = React.createRef();
   let tempClassName = "square";
   if (props.isAnswer) tempClassName += " red";
   if (props.isSelected) tempClassName += " focus";
   if (!props.isValid) tempClassName += " invalid";
+  const onClick = () => {
+    textInput.current.focus();
+    props.onClick();
+  };
   return (
-    <button className={tempClassName} onClick={props.onClick}>
+    <button
+      type="button"
+      className={tempClassName}
+      ref={textInput}
+      onClick={onClick}
+    >
       {props.value}
     </button>
   );
@@ -20,6 +30,13 @@ class Board extends React.Component {
     };
   }
   onClick(y, k) {
+    const [previousRow, previousCol] = this.state.selectedSquare;
+    if (previousRow === y && previousCol === k) {
+      const lastValue = this.props.info.questionGrid[y][k];
+      const newNum = lastValue !== 9 ? lastValue + 1 : 0;
+      this.setState({ previousNumber: [y, k, newNum] });
+      this.props.onKeyPress(y, k, newNum);
+    }
     this.setState({ selectedSquare: [y, k] });
   }
 
@@ -48,8 +65,7 @@ class Board extends React.Component {
       //rows to cover
       .filter((_, i) => rowsToTake.includes(i))
       // cols to cover
-      .filter(x => x.filter((_, i) => colsToTake.includes(i)))
-      .flatMap(x => x);
+      .flatMap(x => x.filter((_, i) => colsToTake.includes(i)));
     if (orginalGrid.filter(x => x === number).length > 1) return 3;
     return 0;
   }
@@ -71,9 +87,11 @@ class Board extends React.Component {
     const questionGrid = this.props.info.questionGrid;
     const answerGrid = this.props.info.answerGrid;
     const [previousRow, previousCol, previousNum] = this.state.previousNumber;
+
     let validNumber = 0;
-    //console.log("Previous: ", (previousRow === previousCol) === previousNum);
     if (previousRow === previousCol && previousRow === -1) {
+      //pass
+    } else if (questionGrid[previousRow][previousCol] !== previousNum) {
       //pass
     } else {
       validNumber = this.userInputIsValid(
@@ -82,7 +100,6 @@ class Board extends React.Component {
         previousNum
       );
     }
-    console.log(validNumber);
     const isValid = (row, col) => {
       switch (validNumber) {
         case 0:
@@ -97,7 +114,6 @@ class Board extends React.Component {
             Math.floor(previousRow / dimLength) * dimLength;
           const startingColIndex =
             Math.floor(previousCol / dimLength) * dimLength;
-          console.log(startingRowIndex, startingColIndex, dimLength);
           return !(
             row >= startingRowIndex &&
             row < startingRowIndex + dimLength &&
